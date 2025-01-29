@@ -58,7 +58,23 @@ public class MemorySpace {
 	 * @return the base address of the allocated block, or -1 if unable to allocate
 	 */
 	public int malloc(int length) {		
-		//// Replace the following statement with your code
+		Node currentNode = freeList.getFirst();
+        while (currentNode != null) {
+            MemoryBlock freeBlock = currentNode.block;
+            if (freeBlock.length >= length) {
+                MemoryBlock allocatedBlock = new MemoryBlock(freeBlock.baseAddress, length);
+                allocatedList.addLast(allocatedBlock);
+                if (freeBlock.length == length)
+                freeList.remove(currentNode.block);
+				else {
+                    freeBlock.baseAddress += length;
+                    freeBlock.length -= length;
+                }
+                
+                return allocatedBlock.baseAddress;
+            }
+            currentNode = currentNode.next;
+        }
 		return -1;
 	}
 
@@ -71,7 +87,20 @@ public class MemorySpace {
 	 *            the starting address of the block to freeList
 	 */
 	public void free(int address) {
-		//// Write your code here
+		if (allocatedList.getSize() == 0) {
+			throw new IllegalArgumentException("index must be between 0 and size");
+		}
+
+        Node current = allocatedList.getFirst();
+        while (current != null) {
+            MemoryBlock allocatedBlock = current.block;
+            if (allocatedBlock.baseAddress == address) {
+                allocatedList.remove(current.block);
+                freeList.addLast(allocatedBlock);
+                return;
+            }
+            current = current.next;
+        }
 	}
 	
 	/**
@@ -88,6 +117,41 @@ public class MemorySpace {
 	 * In this implementation Malloc does not call defrag.
 	 */
 	public void defrag() {
-		//// Write your code here
+		// Sorting the free list based on the base addresses of the memory blocks
+		freeList = sortListByAddress();
+
+		Node currentNode = freeList.getFirst();
+		while (currentNode != null && currentNode.next != null) {
+			MemoryBlock currentBlock = currentNode.block;
+			MemoryBlock nextBlock = currentNode.next.block;
+	
+			// If the current block and next block are adjacent we merge them
+			if (currentBlock.baseAddress + currentBlock.length == nextBlock.baseAddress) {
+				currentBlock.length += nextBlock.length;
+				freeList.remove(nextBlock);
+			} else {
+				currentNode = currentNode.next;
+			}
+		}
+	}
+
+	// Method I've written that sorts the list based on the addresses of memory blocks.
+	private LinkedList sortListByAddress() {
+		LinkedList sortedFreeList = new LinkedList();
+		while (freeList.getSize() > 0) {
+			Node minNode = freeList.getFirst();
+			Node currentNode = freeList.getFirst();
+
+			while (currentNode != null) {
+				if (currentNode.block.baseAddress < minNode.block.baseAddress) {
+					minNode = currentNode;
+				}
+				currentNode = currentNode.next;
+			}
+
+			freeList.remove(minNode.block);
+			sortedFreeList.addLast(minNode.block);
+		}
+		return sortedFreeList;
 	}
 }
